@@ -53,11 +53,14 @@ namespace RideNowAPI.Models
         public DriverStatus Status { get; set; } = DriverStatus.Unavailable;
         public bool IsActive { get; set; } = true;
 
+        public string? ResetToken { get; set; }
+        public DateTime? ResetTokenExpiry { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         public virtual ICollection<Ride> Rides { get; set; } = new List<Ride>();
-        public virtual ICollection<Rating> DriverRatings { get; set; } = new List<Rating>();
+
         public virtual ICollection<DriverEarnings> Earnings { get; set; } = new List<DriverEarnings>();
     }
 }

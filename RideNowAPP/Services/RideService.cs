@@ -1,10 +1,12 @@
-﻿using RideNowAPI.Data;
+﻿using Microsoft.EntityFrameworkCore;
+using RideNowAPI.Data;
 using RideNowAPI.Models;
-using Microsoft.EntityFrameworkCore;
+using RideNowAPP.Services;
 
 namespace RideNowAPI.Services
 {
-    public class RideService
+    public class RideService : IRideService
+    
     {
         private readonly RideNowDbContext _context;
         private readonly LocationService _locationService;
@@ -59,5 +61,8 @@ namespace RideNowAPI.Services
                 .OrderBy(r => r.RequestedAt)
                 .ToListAsync();
         }
+
+
+        
     }
 }

@@ -1,6 +1,8 @@
-﻿namespace RideNowAPI.Services
+﻿using RideNowAPP.Services;
+
+namespace RideNowAPI.Services
 {
-    public class LocationService
+    public class LocationService : ILocationService
     {
         public double CalculateDistance(decimal lat1, decimal lng1, decimal lat2, decimal lng2)
         {

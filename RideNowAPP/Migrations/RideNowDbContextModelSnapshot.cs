@@ -78,6 +78,12 @@ namespace RideNowAPP.Migrations
                         .HasMaxLength(15)
                         .HasColumnType("nvarchar(15)");
 
+                    b.Property<string>("ResetToken")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ResetTokenExpiry")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -141,6 +147,43 @@ namespace RideNowAPP.Migrations
                     b.ToTable("DriverEarnings");
                 });
 
+            modelBuilder.Entity("RideNowAPI.Models.Feedback", b =>
+                {
+                    b.Property<Guid>("FeedbackId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Comment")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("DriverId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("RideId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("FeedbackId");
+
+                    b.HasIndex("DriverId");
+
+                    b.HasIndex("RideId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Feedbacks");
+                });
+
             modelBuilder.Entity("RideNowAPI.Models.Payment", b =>
                 {
                     b.Property<Guid>("PaymentId")
@@ -179,50 +222,35 @@ namespace RideNowAPP.Migrations
                     b.ToTable("Payments");
                 });
 
-            modelBuilder.Entity("RideNowAPI.Models.Rating", b =>
+            modelBuilder.Entity("RideNowAPI.Models.PaymentSelection", b =>
                 {
-                    b.Property<Guid>("RatingId")
+                    b.Property<Guid>("PaymentSelectionId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DriverComment")
+                    b.Property<string>("PaymentMethod")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<Guid>("DriverId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("DriverRating")
-                        .HasColumnType("int");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<Guid>("RideId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("UserComment")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                    b.Property<DateTime>("SelectedAt")
+                        .HasColumnType("datetime2");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("UserRating")
+                    b.Property<int>("Status")
                         .HasColumnType("int");
 
-                    b.HasKey("RatingId");
+                    b.Property<string>("UPIId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.HasIndex("DriverId");
+                    b.HasKey("PaymentSelectionId");
 
-                    b.HasIndex("RideId")
-                        .IsUnique();
+                    b.HasIndex("RideId");
 
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Ratings");
+                    b.ToTable("PaymentSelections");
                 });
 
             modelBuilder.Entity("RideNowAPI.Models.Ride", b =>
@@ -233,11 +261,6 @@ namespace RideNowAPP.Migrations
 
                     b.Property<DateTime?>("AcceptedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("CabNumber")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
 
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("datetime2");
@@ -263,11 +286,6 @@ namespace RideNowAPP.Migrations
 
                     b.Property<decimal>("DropLongitude")
                         .HasColumnType("decimal(11,8)");
-
-                    b.Property<string>("ETA")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
 
                     b.Property<decimal>("Fare")
                         .HasColumnType("decimal(10,2)");
@@ -347,6 +365,12 @@ namespace RideNowAPP.Migrations
                         .HasMaxLength(15)
                         .HasColumnType("nvarchar(15)");
 
+                    b.Property<string>("ResetToken")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ResetTokenExpiry")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -380,6 +404,33 @@ namespace RideNowAPP.Migrations
                     b.Navigation("Ride");
                 });
 
+            modelBuilder.Entity("RideNowAPI.Models.Feedback", b =>
+                {
+                    b.HasOne("RideNowAPI.Models.Driver", "Driver")
+                        .WithMany()
+                        .HasForeignKey("DriverId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("RideNowAPI.Models.Ride", "Ride")
+                        .WithMany()
+                        .HasForeignKey("RideId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RideNowAPI.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Driver");
+
+                    b.Navigation("Ride");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("RideNowAPI.Models.Payment", b =>
                 {
                     b.HasOne("RideNowAPI.Models.Ride", "Ride")
@@ -391,31 +442,15 @@ namespace RideNowAPP.Migrations
                     b.Navigation("Ride");
                 });
 
-            modelBuilder.Entity("RideNowAPI.Models.Rating", b =>
+            modelBuilder.Entity("RideNowAPI.Models.PaymentSelection", b =>
                 {
-                    b.HasOne("RideNowAPI.Models.Driver", "Driver")
-                        .WithMany("DriverRatings")
-                        .HasForeignKey("DriverId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("RideNowAPI.Models.Ride", "Ride")
-                        .WithOne("Rating")
-                        .HasForeignKey("RideNowAPI.Models.Rating", "RideId")
+                        .WithMany()
+                        .HasForeignKey("RideId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("RideNowAPI.Models.User", "User")
-                        .WithMany("Ratings")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Driver");
-
                     b.Navigation("Ride");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("RideNowAPI.Models.Ride", b =>
@@ -438,8 +473,6 @@ namespace RideNowAPP.Migrations
 
             modelBuilder.Entity("RideNowAPI.Models.Driver", b =>
                 {
-                    b.Navigation("DriverRatings");
-
                     b.Navigation("Earnings");
 
                     b.Navigation("Rides");
@@ -448,14 +481,10 @@ namespace RideNowAPP.Migrations
             modelBuilder.Entity("RideNowAPI.Models.Ride", b =>
                 {
                     b.Navigation("Payment");
-
-                    b.Navigation("Rating");
                 });
 
             modelBuilder.Entity("RideNowAPI.Models.User", b =>
                 {
-                    b.Navigation("Ratings");
-
                     b.Navigation("Rides");
                 });
 #pragma warning restore 612, 618

@@ -1,8 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using RideNowAPI.Data;
-using RideNowAPI.Models;
+using RideNowAPI.DTOs;
+using RideNowAPI.Services;
 using System.Security.Claims;
 
 namespace RideNowAPI.Controllers
@@ -12,11 +11,11 @@ namespace RideNowAPI.Controllers
     [Authorize(Roles = "Driver")]
     public class DriverController : ControllerBase
     {
-        private readonly RideNowDbContext _context;
+        private readonly IDriverService _driverService;
 
-        public DriverController(RideNowDbContext context)
+        public DriverController(IDriverService driverService)
         {
-            _context = context;
+            _driverService = driverService;
         }
 
         [HttpGet("profile")]
@@ -67,20 +66,38 @@ namespace RideNowAPI.Controllers
             return Ok("Profile updated successfully");
         }
 
+        [HttpGet("status/{driverId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetDriverStatus(Guid driverId)
+        {
+            try
+            {
+                var result = await _driverService.GetDriverStatusAsync(driverId);
+                return Ok(new { status = result.Status });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
         [HttpPut("status")]
         public async Task<IActionResult> UpdateStatus([FromBody] UpdateDriverStatusDto dto)
         {
-            var driverId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
-            var driver = await _context.Drivers.FindAsync(driverId);
-
-            if (driver == null)
-                return NotFound("Driver not found");
-
-            driver.Status = dto.Status;
-            driver.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-            return Ok("Status updated successfully");
+            try
+            {
+                var driverId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+                await _driverService.UpdateDriverStatusAsync(driverId, dto);
+                return Ok("Status updated successfully");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpGet("earnings")]
@@ -161,19 +178,53 @@ namespace RideNowAPI.Controllers
                 averageRating = 4.7
             });
         }
+
+        [HttpPost("feedback")]
+        public async Task<IActionResult> CreateFeedback([FromBody] CreateFeedbackDto dto)
+        {
+            var driverId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+            
+            var ride = await _context.Rides.FindAsync(dto.RideId);
+            if (ride == null || ride.DriverId != driverId)
+                return BadRequest("Invalid ride");
+
+            var feedback = new Feedback
+            {
+                RideId = dto.RideId,
+                DriverId = driverId,
+                UserId = ride.UserId,
+                Rating = dto.Rating,
+                Comment = dto.Comment
+            };
+
+            _context.Feedbacks.Add(feedback);
+            await _context.SaveChangesAsync();
+            return Ok("Feedback saved successfully");
+        }
+
+        [HttpGet("feedback")]
+        public async Task<IActionResult> GetFeedback()
+        {
+            var driverId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+            
+            var feedbacks = await _context.Feedbacks
+                .Where(f => f.DriverId == driverId)
+                .Include(f => f.Ride)
+                .Include(f => f.User)
+                .OrderByDescending(f => f.CreatedAt)
+                .Select(f => new {
+                    f.FeedbackId,
+                    f.Rating,
+                    f.Comment,
+                    f.CreatedAt,
+                    RideId = f.Ride.RideId,
+                    CustomerName = f.User.Name
+                })
+                .ToListAsync();
+
+            return Ok(feedbacks);
+        }
     }
 
-    public class UpdateDriverProfileDto
-    {
-        public string Name { get; set; } = string.Empty;
-        public string Phone { get; set; } = string.Empty;
-        public string Gender { get; set; } = string.Empty;
-        public string? BloodGroup { get; set; }
-        public string? Address { get; set; }
-    }
 
-    public class UpdateDriverStatusDto
-    {
-        public DriverStatus Status { get; set; }
-    }
 }

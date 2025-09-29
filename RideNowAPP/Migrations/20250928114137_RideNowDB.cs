@@ -74,8 +74,6 @@ namespace RideNowAPP.Migrations
                     VehicleType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     OTP = table.Column<string>(type: "nvarchar(4)", maxLength: 4, nullable: false),
-                    ETA = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    CabNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     RequestedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     AcceptedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     StartedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -128,6 +126,41 @@ namespace RideNowAPP.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Feedbacks",
+                columns: table => new
+                {
+                    FeedbackId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RideId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DriverId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Rating = table.Column<int>(type: "int", nullable: false),
+                    Comment = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Feedbacks", x => x.FeedbackId);
+                    table.ForeignKey(
+                        name: "FK_Feedbacks_Drivers_DriverId",
+                        column: x => x.DriverId,
+                        principalTable: "Drivers",
+                        principalColumn: "DriverId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Feedbacks_Rides_RideId",
+                        column: x => x.RideId,
+                        principalTable: "Rides",
+                        principalColumn: "RideId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Feedbacks_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Payments",
                 columns: table => new
                 {
@@ -152,40 +185,25 @@ namespace RideNowAPP.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Ratings",
+                name: "PaymentSelections",
                 columns: table => new
                 {
-                    RatingId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PaymentSelectionId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     RideId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    DriverId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    UserRating = table.Column<int>(type: "int", nullable: false),
-                    DriverRating = table.Column<int>(type: "int", nullable: false),
-                    UserComment = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    DriverComment = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    PaymentMethod = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    UPIId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    SelectedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Ratings", x => x.RatingId);
+                    table.PrimaryKey("PK_PaymentSelections", x => x.PaymentSelectionId);
                     table.ForeignKey(
-                        name: "FK_Ratings_Drivers_DriverId",
-                        column: x => x.DriverId,
-                        principalTable: "Drivers",
-                        principalColumn: "DriverId",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Ratings_Rides_RideId",
+                        name: "FK_PaymentSelections_Rides_RideId",
                         column: x => x.RideId,
                         principalTable: "Rides",
                         principalColumn: "RideId",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Ratings_Users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "Users",
-                        principalColumn: "UserId",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(
@@ -210,11 +228,27 @@ namespace RideNowAPP.Migrations
                 column: "LicenseNumber",
                 unique: true,
                 filter: "[LicenseNumber] IS NOT NULL");
+
             migrationBuilder.CreateIndex(
                 name: "IX_Drivers_Phone",
                 table: "Drivers",
                 column: "Phone",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Feedbacks_DriverId",
+                table: "Feedbacks",
+                column: "DriverId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Feedbacks_RideId",
+                table: "Feedbacks",
+                column: "RideId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Feedbacks_UserId",
+                table: "Feedbacks",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Payments_RideId",
@@ -223,20 +257,9 @@ namespace RideNowAPP.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Ratings_DriverId",
-                table: "Ratings",
-                column: "DriverId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Ratings_RideId",
-                table: "Ratings",
-                column: "RideId",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Ratings_UserId",
-                table: "Ratings",
-                column: "UserId");
+                name: "IX_PaymentSelections_RideId",
+                table: "PaymentSelections",
+                column: "RideId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Rides_DriverId",
@@ -268,10 +291,13 @@ namespace RideNowAPP.Migrations
                 name: "DriverEarnings");
 
             migrationBuilder.DropTable(
+                name: "Feedbacks");
+
+            migrationBuilder.DropTable(
                 name: "Payments");
 
             migrationBuilder.DropTable(
-                name: "Ratings");
+                name: "PaymentSelections");
 
             migrationBuilder.DropTable(
                 name: "Rides");

@@ -1,11 +1,12 @@
 ﻿using Microsoft.IdentityModel.Tokens;
+using RideNowAPP.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
 namespace RideNowAPI.Services
 {
-    public class JwtService
+    public class JwtService : IJwtService
     {
         private readonly IConfiguration _configuration;
 

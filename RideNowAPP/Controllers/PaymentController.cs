@@ -61,6 +61,44 @@ namespace RideNowAPI.Controllers
 
             return Ok(payment);
         }
+
+        [HttpPost("select")]
+        public async Task<IActionResult> SelectPaymentMethod([FromBody] PaymentSelectionDto dto)
+        {
+            var existingSelection = await _context.PaymentSelections
+                .FirstOrDefaultAsync(ps => ps.RideId == dto.RideId);
+
+            if (existingSelection != null)
+            {
+                existingSelection.PaymentMethod = dto.PaymentMethod;
+                existingSelection.UPIId = dto.UPIId;
+                existingSelection.Status = PaymentSelectionStatus.Selected;
+                existingSelection.SelectedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                var selection = new PaymentSelection
+                {
+                    RideId = dto.RideId,
+                    PaymentMethod = dto.PaymentMethod,
+                    UPIId = dto.UPIId,
+                    Status = PaymentSelectionStatus.Selected
+                };
+                _context.PaymentSelections.Add(selection);
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok("Payment method selected");
+        }
+
+        [HttpGet("selection/{rideId}")]
+        public async Task<IActionResult> GetPaymentSelection(Guid rideId)
+        {
+            var selection = await _context.PaymentSelections
+                .FirstOrDefaultAsync(ps => ps.RideId == rideId);
+
+            return Ok(selection);
+        }
     }
 
     public class UPIQRDto
@@ -73,6 +111,13 @@ namespace RideNowAPI.Controllers
     {
         public Guid RideId { get; set; }
         public decimal Amount { get; set; }
+        public string PaymentMethod { get; set; } = string.Empty;
+        public string? UPIId { get; set; }
+    }
+
+    public class PaymentSelectionDto
+    {
+        public Guid RideId { get; set; }
         public string PaymentMethod { get; set; } = string.Empty;
         public string? UPIId { get; set; }
     }

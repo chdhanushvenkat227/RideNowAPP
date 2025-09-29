@@ -28,11 +28,15 @@ namespace RideNowAPI.Controllers
         {
             var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
             var user = await _context.Users.FindAsync(userId);
+            
+            Console.WriteLine($"[DEBUG] New ride request from user {user.Name}: {dto.PickupLocation} -> {dto.DropLocation}");
 
             var ride = await _rideService.CreateRideRequest(
                 userId, user.Name, dto.PickupLocation, dto.DropLocation,
                 dto.PickupLatitude, dto.PickupLongitude, dto.DropLatitude, dto.DropLongitude,
                 dto.VehicleType);
+            
+            Console.WriteLine($"[DEBUG] Created ride {ride.RideId} with status {ride.Status}");
 
             return Ok(new
             {
@@ -64,16 +68,38 @@ namespace RideNowAPI.Controllers
         public async Task<IActionResult> AcceptRide(Guid rideId)
         {
             var driverId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+            
+            // First, complete any old InProgress rides for this driver
+            var oldRides = await _context.Rides
+                .Where(r => r.DriverId == driverId && 
+                       (r.Status == RideStatus.InProgress || r.Status == RideStatus.Accepted))
+                .ToListAsync();
+            
+            foreach (var oldRide in oldRides)
+            {
+                Console.WriteLine($"[DEBUG] Force completing old ride {oldRide.RideId}");
+                oldRide.Status = RideStatus.Completed;
+                oldRide.CompletedAt = DateTime.UtcNow;
+            }
+            
             var ride = await _context.Rides.FindAsync(rideId);
+            
+            Console.WriteLine($"[DEBUG] Driver {driverId} attempting to accept ride {rideId}");
 
             if (ride == null || ride.Status != RideStatus.Requested)
+            {
+                Console.WriteLine($"[DEBUG] Ride not available. Ride exists: {ride != null}, Status: {ride?.Status}");
                 return BadRequest("Ride not available");
+            }
+            
+            Console.WriteLine($"[DEBUG] Accepting ride: {ride.PickupLocation} -> {ride.DropLocation}");
 
             ride.DriverId = driverId;
             ride.Status = RideStatus.Accepted;
             ride.AcceptedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            Console.WriteLine($"[DEBUG] Ride {rideId} accepted successfully by driver {driverId}");
             return Ok("Ride accepted successfully");
         }
 
@@ -99,8 +125,15 @@ namespace RideNowAPI.Controllers
         {
             var ride = await _context.Rides.FindAsync(rideId);
 
-            if (ride == null || ride.Status != RideStatus.InProgress)
-                return BadRequest("Ride cannot be completed");
+            if (ride == null)
+                return BadRequest("Ride not found");
+
+            if (ride.Status != RideStatus.InProgress && ride.Status != RideStatus.Accepted)
+                return BadRequest($"Ride cannot be completed. Current status: {ride.Status}");
+
+            // If ride was never started, mark it as started now
+            if (ride.StartedAt == null)
+                ride.StartedAt = DateTime.UtcNow;
 
             ride.Status = RideStatus.Completed;
             ride.CompletedAt = DateTime.UtcNow;
@@ -129,7 +162,7 @@ namespace RideNowAPI.Controllers
                 ride.Distance,
                 ride.Fare,
                 ride.VehicleType,
-                ride.Status,
+                Status = ride.Status.ToString(),
                 ride.OTP,
                 ride.RequestedAt,
                 ride.AcceptedAt,
@@ -142,30 +175,65 @@ namespace RideNowAPI.Controllers
         public async Task<IActionResult> GetCurrentDriverRide()
         {
             var driverId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
-            var ride = await _context.Rides
+            Console.WriteLine($"[DEBUG] GetCurrentDriverRide called for driverId: {driverId}");
+            
+            // Debug: Check all rides for this driver
+            var allRides = await _context.Rides
                 .Include(r => r.User)
-                .FirstOrDefaultAsync(r => r.DriverId == driverId &&
-                    (r.Status == RideStatus.Accepted || r.Status == RideStatus.InProgress));
-
-            if (ride == null) return Ok(null);
-
-            return Ok(new {
-                ride.RideId,
-                ride.CustomerName,
-                ride.PickupLocation,
-                ride.DropLocation,
-                ride.Distance,
-                ride.Fare,
-                ride.VehicleType,
-                ride.Status,
-                ride.OTP,
-                ride.RequestedAt,
-                ride.AcceptedAt,
-                CustomerPhone = ride.User?.Phone
-            });
+                .Where(r => r.DriverId == driverId)
+                .OrderByDescending(r => r.RequestedAt)
+                .Take(10)
+                .ToListAsync();
+            
+            Console.WriteLine($"[DEBUG] Found {allRides.Count} total rides for driver");
+            foreach (var ride in allRides)
+            {
+                Console.WriteLine($"[DEBUG] Ride {ride.RideId}: Status={ride.Status} ({(int)ride.Status}), {ride.PickupLocation} -> {ride.DropLocation}");
+            }
+            
+            // Only return active rides (Accepted or InProgress) - STRICT FILTER
+            var activeRides = await _context.Rides
+                .Include(r => r.User)
+                .Where(r => r.DriverId == driverId)
+                .ToListAsync();
+            
+            var activeRide = activeRides
+                .Where(r => r.Status == RideStatus.Accepted || r.Status == RideStatus.InProgress)
+                .OrderByDescending(r => r.RequestedAt)
+                .FirstOrDefault();
+            
+            if (activeRide != null && (activeRide.Status == RideStatus.Accepted || activeRide.Status == RideStatus.InProgress))
+            {
+                Console.WriteLine($"[DEBUG] ✅ Returning active ride: {activeRide.RideId} - Status: {activeRide.Status}");
+                return Ok(new {
+                    rideId = activeRide.RideId,
+                    customerName = activeRide.CustomerName,
+                    pickupLocation = activeRide.PickupLocation,
+                    dropLocation = activeRide.DropLocation,
+                    distance = activeRide.Distance,
+                    fare = activeRide.Fare,
+                    vehicleType = activeRide.VehicleType,
+                    status = activeRide.Status.ToString(),
+                    otp = activeRide.OTP,
+                    requestedAt = activeRide.RequestedAt,
+                    acceptedAt = activeRide.AcceptedAt,
+                    startedAt = activeRide.StartedAt,
+                    user = new { name = activeRide.User?.Name, phone = activeRide.User?.Phone }
+                });
+            }
+            else if (activeRide != null)
+            {
+                Console.WriteLine($"[DEBUG] ❌ Ignoring completed ride: {activeRide.RideId} - Status: {activeRide.Status}");
+            }
+            
+            Console.WriteLine($"[DEBUG] ❌ No active rides found for driver {driverId}");
+            return Ok(null);
         }
-    }
 
+        
+    
+
+    }
     public class RideRequestDto
     {
         public string PickupLocation { get; set; } = string.Empty;

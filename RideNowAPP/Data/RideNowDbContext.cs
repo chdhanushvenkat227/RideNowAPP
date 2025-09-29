@@ -13,8 +13,10 @@ namespace RideNowAPI.Data
         public DbSet<Driver> Drivers { get; set; }
         public DbSet<Ride> Rides { get; set; }
         public DbSet<Payment> Payments { get; set; }
-        public DbSet<Rating> Ratings { get; set; }
+
         public DbSet<DriverEarnings> DriverEarnings { get; set; }
+        public DbSet<Feedback> Feedbacks { get; set; }
+        public DbSet<PaymentSelection> PaymentSelections { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -58,24 +60,7 @@ namespace RideNowAPI.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Rating relationships
-            modelBuilder.Entity<Rating>(entity =>
-            {
-                entity.HasOne(r => r.Ride)
-                    .WithOne(ride => ride.Rating)
-                    .HasForeignKey<Rating>(r => r.RideId)
-                    .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasOne(r => r.User)
-                    .WithMany(u => u.Ratings)
-                    .HasForeignKey(r => r.UserId)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(r => r.Driver)
-                    .WithMany(d => d.DriverRatings)
-                    .HasForeignKey(r => r.DriverId)
-                    .OnDelete(DeleteBehavior.Restrict);
-            });
 
             // DriverEarnings relationships
             modelBuilder.Entity<DriverEarnings>(entity =>
@@ -89,6 +74,34 @@ namespace RideNowAPI.Data
                     .WithMany()
                     .HasForeignKey(de => de.RideId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Feedback relationships
+            modelBuilder.Entity<Feedback>(entity =>
+            {
+                entity.HasOne(f => f.Ride)
+                    .WithMany()
+                    .HasForeignKey(f => f.RideId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(f => f.Driver)
+                    .WithMany()
+                    .HasForeignKey(f => f.DriverId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(f => f.User)
+                    .WithMany()
+                    .HasForeignKey(f => f.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // PaymentSelection relationships
+            modelBuilder.Entity<PaymentSelection>(entity =>
+            {
+                entity.HasOne(ps => ps.Ride)
+                    .WithMany()
+                    .HasForeignKey(ps => ps.RideId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

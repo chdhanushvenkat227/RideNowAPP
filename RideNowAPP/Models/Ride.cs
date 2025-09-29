@@ -61,11 +61,6 @@ namespace RideNowAPI.Models
         [StringLength(4)]
         public string OTP { get; set; } = string.Empty;
 
-        [StringLength(20)]
-        public string ETA { get; set; } = string.Empty;
-
-        [StringLength(20)]
-        public string CabNumber { get; set; } = string.Empty;
 
         public DateTime RequestedAt { get; set; } = DateTime.UtcNow;
         public DateTime? AcceptedAt { get; set; }
@@ -73,12 +68,12 @@ namespace RideNowAPI.Models
         public DateTime? CompletedAt { get; set; }
 
         [ForeignKey("UserId")]
-        public virtual User User { get; set; } = null!;
+        public  User User { get; set; } = null!;
 
         [ForeignKey("DriverId")]
-        public virtual Driver? Driver { get; set; }
+        public  Driver? Driver { get; set; }
 
-        public virtual Payment? Payment { get; set; }
-        public virtual Rating? Rating { get; set; }
+        public  Payment? Payment { get; set; }
+
     }
 }
