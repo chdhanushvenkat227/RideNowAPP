@@ -21,49 +21,31 @@ namespace RideNowAPI.Controllers
         [HttpGet("profile")]
         public async Task<IActionResult> GetProfile()
         {
-            var driverId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
-            var driver = await _context.Drivers.FindAsync(driverId);
-
-            if (driver == null)
-                return NotFound("Driver not found");
-
-            return Ok(new
+            try
             {
-                driver.DriverId,
-                driver.Name,
-                driver.Email,
-                driver.Phone,
-                driver.Gender,
-                driver.LicenseNumber,
-                driver.LicenseExpiryDate,
-                driver.BloodGroup,
-                driver.Address,
-                driver.Location,
-                driver.VehicleType,
-                driver.Status,
-                driver.IsActive,
-                driver.CreatedAt
-            });
+                var driverId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+                var result = await _driverService.GetDriverProfileAsync(driverId);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
         [HttpPut("profile")]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateDriverProfileDto dto)
         {
-            var driverId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
-            var driver = await _context.Drivers.FindAsync(driverId);
-
-            if (driver == null)
-                return NotFound("Driver not found");
-
-            driver.Name = dto.Name;
-            driver.Phone = dto.Phone;
-            driver.Gender = dto.Gender;
-            driver.BloodGroup = dto.BloodGroup;
-            driver.Address = dto.Address;
-            driver.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-            return Ok("Profile updated successfully");
+            try
+            {
+                var driverId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+                await _driverService.UpdateDriverProfileAsync(driverId, dto);
+                return Ok("Profile updated successfully");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
         [HttpGet("status/{driverId}")]
@@ -82,6 +64,7 @@ namespace RideNowAPI.Controllers
         }
 
         [HttpPut("status")]
+        [AllowAnonymous]
         public async Task<IActionResult> UpdateStatus([FromBody] UpdateDriverStatusDto dto)
         {
             try
@@ -99,130 +82,55 @@ namespace RideNowAPI.Controllers
                 return BadRequest(ex.Message);
             }
         }
+        
+        [HttpPost("status/{driverId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> UpdateDriverStatusByIdPost(Guid driverId, [FromBody] UpdateDriverStatusDto dto)
+        {
+            try
+            {
+                Console.WriteLine($"[DEBUG] POST: Updating driver {driverId} status to {dto.Status}");
+                await _driverService.UpdateDriverStatusAsync(driverId, dto);
+                return Ok("Status updated successfully");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
         [HttpGet("earnings")]
-        public async Task<IActionResult> GetEarnings()
+        public IActionResult GetEarnings()
         {
-            var driverId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
-
-            var earnings = await _context.DriverEarnings
-                .Where(de => de.DriverId == driverId)
-                .Include(de => de.Ride)
-                .OrderByDescending(de => de.Date)
-                .Select(de => new {
-                    de.EarningId,
-                    de.Date,
-                    de.Fare,
-                    de.PaymentMethod,
-                    de.Status,
-                    RideDetails = new
-                    {
-                        de.Ride.PickupLocation,
-                        de.Ride.DropLocation,
-                        de.Ride.Distance
-                    }
-                })
-                .ToListAsync();
-
-            var totalEarnings = await _context.DriverEarnings
-                .Where(de => de.DriverId == driverId)
-                .SumAsync(de => de.Fare);
-
-            return Ok(new { earnings, totalEarnings });
+            return StatusCode(501, "Earnings endpoint not implemented in service layer");
         }
 
         [HttpGet("ride-history")]
-        public async Task<IActionResult> GetRideHistory()
+        public IActionResult GetRideHistory()
         {
-            var driverId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
-
-            var rides = await _context.Rides
-                .Where(r => r.DriverId == driverId)
-                .Include(r => r.User)
-                .Include(r => r.Payment)
-                .OrderByDescending(r => r.RequestedAt)
-                .Select(r => new {
-                    r.RideId,
-                    r.PickupLocation,
-                    r.DropLocation,
-                    r.Distance,
-                    r.Fare,
-                    r.VehicleType,
-                    r.Status,
-                    r.RequestedAt,
-                    r.CompletedAt,
-                    CustomerName = r.User.Name,
-                    PaymentStatus = r.Payment != null ? r.Payment.Status.ToString() : "Pending"
-                })
-                .ToListAsync();
-
-            return Ok(rides);
+            return StatusCode(501, "Ride history endpoint not implemented in service layer");
         }
 
         [HttpGet("dashboard-stats")]
-        public async Task<IActionResult> GetDashboardStats()
+        public IActionResult GetDashboardStats()
         {
-            var driverId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
-
-            var totalRides = await _context.Rides.CountAsync(r => r.DriverId == driverId);
-            var completedRides = await _context.Rides.CountAsync(r => r.DriverId == driverId && r.Status == RideStatus.Completed);
-            var totalEarnings = await _context.DriverEarnings
-                .Where(de => de.DriverId == driverId)
-                .SumAsync(de => de.Fare);
-
-            return Ok(new
-            {
-                totalRides,
-                completedRides,
-                totalEarnings,
-                averageRating = 4.7
-            });
+            return StatusCode(501, "Dashboard stats endpoint not implemented in service layer");
         }
 
         [HttpPost("feedback")]
-        public async Task<IActionResult> CreateFeedback([FromBody] CreateFeedbackDto dto)
+        public IActionResult CreateFeedback([FromBody] CreateFeedbackDto dto)
         {
-            var driverId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
-            
-            var ride = await _context.Rides.FindAsync(dto.RideId);
-            if (ride == null || ride.DriverId != driverId)
-                return BadRequest("Invalid ride");
-
-            var feedback = new Feedback
-            {
-                RideId = dto.RideId,
-                DriverId = driverId,
-                UserId = ride.UserId,
-                Rating = dto.Rating,
-                Comment = dto.Comment
-            };
-
-            _context.Feedbacks.Add(feedback);
-            await _context.SaveChangesAsync();
-            return Ok("Feedback saved successfully");
+            return StatusCode(501, "Feedback creation not implemented in service layer");
         }
 
         [HttpGet("feedback")]
-        public async Task<IActionResult> GetFeedback()
+        public IActionResult GetFeedback()
         {
-            var driverId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
-            
-            var feedbacks = await _context.Feedbacks
-                .Where(f => f.DriverId == driverId)
-                .Include(f => f.Ride)
-                .Include(f => f.User)
-                .OrderByDescending(f => f.CreatedAt)
-                .Select(f => new {
-                    f.FeedbackId,
-                    f.Rating,
-                    f.Comment,
-                    f.CreatedAt,
-                    RideId = f.Ride.RideId,
-                    CustomerName = f.User.Name
-                })
-                .ToListAsync();
-
-            return Ok(feedbacks);
+            return StatusCode(501, "Feedback retrieval not implemented in service layer");
         }
     }
 

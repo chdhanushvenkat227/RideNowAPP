@@ -23,15 +23,19 @@ namespace RideNowAPI.Services
         public async Task<Payment> ProcessPayment(Guid rideId, decimal amount,
             PaymentMethod method, string? upiId = null)
         {
+            Console.WriteLine($"[DEBUG] Processing payment for ride {rideId}, amount {amount}, method {method}");
+            
             var ride = await _context.Rides.FindAsync(rideId);
-            if (ride?.DriverId == null)
-                throw new InvalidOperationException("Ride or driver not found");
+            if (ride == null)
+                throw new InvalidOperationException($"Ride {rideId} not found");
+            
+            Console.WriteLine($"[DEBUG] Ride found: {ride.RideId}, Status: {ride.Status}, DriverId: {ride.DriverId}");
 
             // Check if payment already exists
             var existingPayment = await _context.Payments.FirstOrDefaultAsync(p => p.RideId == rideId);
             if (existingPayment != null)
             {
-                Console.WriteLine($"[DEBUG] Payment already exists for ride {rideId}");
+                Console.WriteLine($"[DEBUG] Payment already exists for ride {rideId}, returning existing payment");
                 return existingPayment;
             }
 
@@ -45,24 +49,42 @@ namespace RideNowAPI.Services
                 UPIId = upiId
             };
 
-            // Check if earnings record already exists
-            var existingEarning = await _context.DriverEarnings.FirstOrDefaultAsync(e => e.RideId == rideId);
-            if (existingEarning == null)
+            // Only create earnings record if driver is assigned
+            if (ride.DriverId != null)
             {
-                var earning = new DriverEarnings
+                var existingEarning = await _context.DriverEarnings.FirstOrDefaultAsync(e => e.RideId == rideId);
+                if (existingEarning == null)
                 {
-                    DriverId = ride.DriverId.Value,
-                    RideId = rideId,
-                    Fare = amount,
-                    PaymentMethod = method.ToString(),
-                    Status = "Received"
-                };
-                _context.DriverEarnings.Add(earning);
+                    var earning = new DriverEarnings
+                    {
+                        DriverId = ride.DriverId.Value,
+                        RideId = rideId,
+                        Fare = amount,
+                        PaymentMethod = method.ToString(),
+                        Status = "Received"
+                    };
+                    _context.DriverEarnings.Add(earning);
+                    Console.WriteLine($"[DEBUG] Created earnings record for driver {ride.DriverId}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[DEBUG] No driver assigned to ride {rideId}, skipping earnings record");
             }
 
             _context.Payments.Add(payment);
-            await _context.SaveChangesAsync();
-            return payment;
+            
+            try
+            {
+                await _context.SaveChangesAsync();
+                Console.WriteLine($"[DEBUG] Payment processed successfully for ride {rideId}");
+                return payment;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] Failed to save payment for ride {rideId}: {ex.Message}");
+                throw new InvalidOperationException($"Failed to process payment: {ex.Message}");
+            }
         }
     }
 }

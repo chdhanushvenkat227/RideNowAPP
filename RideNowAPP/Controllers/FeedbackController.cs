@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RideNowAPI.Data;
 using RideNowAPI.Models;
-using RideNowAPI.DTO;
+using RideNowAPI.DTOs;
 using System.Security.Claims;
 
 namespace RideNowAPI.Controllers

@@ -54,12 +54,22 @@ namespace RideNowAPI.Services
 
         public async Task<List<Ride>> GetAvailableRides(string location, string vehicleType)
         {
-            return await _context.Rides
-                .Where(r => r.Status == RideStatus.Requested &&
-                           r.VehicleType == vehicleType)
+            Console.WriteLine($"[DEBUG] Getting available rides for location: {location}, vehicleType: {vehicleType}");
+            
+            // Only get rides that are currently requested (not completed, cancelled, or in progress)
+            var rides = await _context.Rides
+                .Where(r => r.Status == RideStatus.Requested && r.DriverId == null)
                 .Include(r => r.User)
-                .OrderBy(r => r.RequestedAt)
+                .OrderByDescending(r => r.RequestedAt)
                 .ToListAsync();
+            
+            Console.WriteLine($"[DEBUG] Found {rides.Count} available ride requests");
+            foreach (var ride in rides)
+            {
+                Console.WriteLine($"[DEBUG] Available Ride {ride.RideId}: {ride.CustomerName} - {ride.PickupLocation} -> {ride.DropLocation}, Requested: {ride.RequestedAt}");
+            }
+            
+            return rides;
         }
 
 

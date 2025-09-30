@@ -104,6 +104,36 @@ namespace RideNowAPI.Controllers
                 averageRating = 4.5
             });
         }
+
+
+        [HttpDelete("delete-users/{id}")]
+        public async Task<IActionResult> DeleteUsers(int id)
+        {
+            // Get the current user's ID from JWT claims
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userIdClaim == null)
+            {
+                return Unauthorized("User ID claim not found.");
+            }
+
+            var currentUserId = Guid.Parse(userIdClaim);
+
+            // Find the user to delete
+            var userToDelete = await _context.Users.FindAsync(id);
+            if (userToDelete == null)
+            {
+                return NotFound($"User with ID {id} not found.");
+            }
+
+           
+
+            // Delete the user
+            _context.Users.Remove(userToDelete);
+            await _context.SaveChangesAsync();
+
+            return Ok($"User with ID {id} has been deleted.");
+        }
+
     }
 
     public class UpdateUserProfileDto

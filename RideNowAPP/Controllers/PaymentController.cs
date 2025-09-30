@@ -22,20 +22,23 @@ namespace RideNowAPI.Controllers
         }
 
         [HttpPost("upi/generate-qr")]
+        [AllowAnonymous]
         public async Task<IActionResult> GenerateUPIQR([FromBody] UPIQRDto dto)
         {
             var ride = await _context.Rides
                 .Include(r => r.Driver)
                 .FirstOrDefaultAsync(r => r.RideId == dto.RideId);
 
-            if (ride?.Driver == null)
-                return BadRequest("Ride or driver not found");
+            if (ride == null)
+                return BadRequest("Ride not found");
 
-            var qrCode = _paymentService.GenerateUPIQR(ride.Driver.Name, dto.Amount);
+            var driverName = ride.Driver?.Name ?? "RideNow Driver";
+            var qrCode = _paymentService.GenerateUPIQR(driverName, dto.Amount);
             return Ok(new { qrCode });
         }
 
         [HttpPost("process")]
+        [AllowAnonymous]
         public async Task<IActionResult> ProcessPayment([FromBody] PaymentDto dto)
         {
             if (!Enum.TryParse<PaymentMethod>(dto.PaymentMethod, out var paymentMethod))
@@ -63,6 +66,7 @@ namespace RideNowAPI.Controllers
         }
 
         [HttpPost("select")]
+        [AllowAnonymous]
         public async Task<IActionResult> SelectPaymentMethod([FromBody] PaymentSelectionDto dto)
         {
             var existingSelection = await _context.PaymentSelections
@@ -92,6 +96,7 @@ namespace RideNowAPI.Controllers
         }
 
         [HttpGet("selection/{rideId}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetPaymentSelection(Guid rideId)
         {
             var selection = await _context.PaymentSelections

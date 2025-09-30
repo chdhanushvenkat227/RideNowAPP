@@ -44,6 +44,7 @@ namespace RideNowAPI.Services
                 UserId = user.UserId,
                 Name = user.Name,
                 Email = user.Email,
+                Phone = user.Phone,
                 Role = "User"
             };
         }
@@ -63,6 +64,7 @@ namespace RideNowAPI.Services
                 UserId = user.UserId,
                 Name = user.Name,
                 Email = user.Email,
+                Phone = user.Phone,
                 Role = "User"
             };
         }
@@ -125,6 +127,7 @@ namespace RideNowAPI.Services
                 UserId = driver.DriverId,
                 Name = driver.Name,
                 Email = driver.Email,
+                Phone = driver.Phone,
                 Role = "Driver"
             };
         }
@@ -144,6 +147,7 @@ namespace RideNowAPI.Services
                 UserId = driver.DriverId,
                 Name = driver.Name,
                 Email = driver.Email,
+                Phone = driver.Phone,
                 Role = "Driver"
             };
         }
