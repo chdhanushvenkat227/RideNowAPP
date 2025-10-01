@@ -7,7 +7,7 @@ using System.Security.Claims;
 namespace RideNowAPI.Controllers
 {
     [ApiController]
-    [Route("api/auth/driver")]
+    [Route("api/driver")]
     public class DriverAuthController : ControllerBase
     {
         private readonly IAuthService _authService;

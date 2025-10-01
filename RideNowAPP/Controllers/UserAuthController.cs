@@ -5,7 +5,7 @@ using RideNowAPI.Services;
 namespace RideNowAPI.Controllers
 {
     [ApiController]
-    [Route("api/auth/user")]
+    [Route("api/user")]
     public class UserAuthController : ControllerBase
     {
         private readonly IAuthService _authService;

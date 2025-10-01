@@ -28,20 +28,33 @@ namespace RideNowAPI.Controllers
             if (ride == null || ride.DriverId == null)
                 return BadRequest("Invalid ride");
 
+            // Check for existing feedback of the same type
             var existingFeedback = await _context.Feedbacks
-                .FirstOrDefaultAsync(f => f.RideId == dto.RideId);
-            
+                .FirstOrDefaultAsync(f => f.RideId == dto.RideId && f.FeedbackType == dto.FeedbackType);
+
             if (existingFeedback != null)
-                return BadRequest("Feedback already submitted for this ride");
+                return BadRequest($"{dto.FeedbackType} feedback already submitted for this ride");
 
             var feedback = new Feedback
             {
                 RideId = dto.RideId,
-                DriverId = ride.DriverId.Value,
-                UserId = ride.UserId,
                 Rating = dto.Rating,
-                Comment = dto.Comment
+                Comment = dto.Comment,
+                FeedbackType = dto.FeedbackType,
+                CreatedAt = DateTime.UtcNow
             };
+
+            // Set appropriate IDs based on feedback type
+            if (dto.FeedbackType == "DriverToUser")
+            {
+                feedback.DriverId = dto.DriverId ?? ride.DriverId.Value;
+                feedback.UserId = ride.UserId;
+            }
+            else
+            {
+                feedback.DriverId = ride.DriverId.Value;
+                feedback.UserId = ride.UserId;
+            }
 
             _context.Feedbacks.Add(feedback);
             await _context.SaveChangesAsync();
@@ -52,7 +65,7 @@ namespace RideNowAPI.Controllers
         public async Task<IActionResult> GetDriverFeedback(Guid driverId)
         {
             var feedbacks = await _context.Feedbacks
-                .Where(f => f.DriverId == driverId)
+                .Where(f => f.DriverId == driverId && f.FeedbackType == "UserToDriver")  // Only user feedback about driver
                 .Include(f => f.User)
                 .Include(f => f.Ride)
                 .OrderByDescending(f => f.CreatedAt)
@@ -62,7 +75,8 @@ namespace RideNowAPI.Controllers
                     f.Comment,
                     f.CreatedAt,
                     CustomerName = f.User.Name,
-                    RideDetails = new {
+                    RideDetails = new
+                    {
                         f.Ride.PickupLocation,
                         f.Ride.DropLocation,
                         f.Ride.CompletedAt
@@ -96,7 +110,8 @@ namespace RideNowAPI.Controllers
                     de.Fare,
                     de.Date,
                     RideId = de.Ride.RideId,
-                    RideDetails = new {
+                    RideDetails = new
+                    {
                         de.Ride.PickupLocation,
                         de.Ride.DropLocation,
                         de.Ride.CompletedAt
@@ -107,7 +122,7 @@ namespace RideNowAPI.Controllers
 
             var rideIds = earnings.Select(e => e.RideId).ToList();
             var feedbacks = await _context.Feedbacks
-                .Where(f => rideIds.Contains(f.RideId))
+                .Where(f => rideIds.Contains(f.RideId) && f.FeedbackType == "UserToDriver")  // Only user feedback
                 .Include(f => f.User)
                 .Select(f => new {
                     f.RideId,
@@ -133,5 +148,4 @@ namespace RideNowAPI.Controllers
             return Ok(new { earnings = result, totalEarnings, averageRating });
         }
     }
-
 }

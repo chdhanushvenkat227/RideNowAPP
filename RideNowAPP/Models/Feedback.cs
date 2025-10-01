@@ -23,6 +23,9 @@ namespace RideNowAPI.Models
         [StringLength(500)]
         public string Comment { get; set; } = string.Empty;
 
+        [StringLength(20)]
+        public string FeedbackType { get; set; } = "UserToDriver";  // NEW FIELD
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         [ForeignKey("RideId")]

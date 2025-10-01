@@ -6,12 +6,16 @@ namespace RideNowAPI.DTOs
     {
         [Required]
         public Guid RideId { get; set; }
-        
+
         [Required]
         [Range(1, 5)]
         public int Rating { get; set; }
-        
-        [Required]
-        public string Comment { get; set; } = string.Empty;
+
+        public string Comment { get; set; } = string.Empty;  // Removed [Required]
+
+        [StringLength(20)]
+        public string FeedbackType { get; set; } = "UserToDriver";  // NEW FIELD
+
+        public Guid? DriverId { get; set; }  // NEW FIELD
     }
 }
