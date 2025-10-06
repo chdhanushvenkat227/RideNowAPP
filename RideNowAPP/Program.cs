@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using RideNowAPI.Data;
 using RideNowAPI.Services;
+using RideNowAPP;
 using System.Text;
+using RideNowAPP.GlobalExceptionMiddleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,7 +62,12 @@ builder.Services.AddCors(options =>
     });
 });
 
+
 var app = builder.Build();
+
+app.UseMiddleware<GlobalExceptionMiddleware>();
+
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

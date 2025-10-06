@@ -37,10 +37,12 @@ namespace RideNowAPI.Services
             await _context.SaveChangesAsync();
 
             var token = _jwtService.GenerateToken(user.UserId, user.Email, "User");
+            var refreshToken = _jwtService.GenerateRefreshToken();
 
             return new AuthResponseDto
             {
                 Token = token,
+                RefreshToken = refreshToken,
                 UserId = user.UserId,
                 Name = user.Name,
                 Email = user.Email,
@@ -57,10 +59,12 @@ namespace RideNowAPI.Services
                 throw new UnauthorizedAccessException("Invalid email or password");
 
             var token = _jwtService.GenerateToken(user.UserId, user.Email, "User");
+            var refreshToken = _jwtService.GenerateRefreshToken();
 
             return new AuthResponseDto
             {
                 Token = token,
+                RefreshToken = refreshToken,
                 UserId = user.UserId,
                 Name = user.Name,
                 Email = user.Email,
@@ -120,10 +124,12 @@ namespace RideNowAPI.Services
             await _context.SaveChangesAsync();
 
             var token = _jwtService.GenerateToken(driver.DriverId, driver.Email, "Driver");
+            var refreshToken = _jwtService.GenerateRefreshToken();
 
             return new AuthResponseDto
             {
                 Token = token,
+                RefreshToken = refreshToken,
                 UserId = driver.DriverId,
                 Name = driver.Name,
                 Email = driver.Email,
@@ -140,10 +146,12 @@ namespace RideNowAPI.Services
                 throw new UnauthorizedAccessException("Invalid email or password");
 
             var token = _jwtService.GenerateToken(driver.DriverId, driver.Email, "Driver");
+            var refreshToken = _jwtService.GenerateRefreshToken();
 
             return new AuthResponseDto
             {
                 Token = token,
+                RefreshToken = refreshToken,
                 UserId = driver.DriverId,
                 Name = driver.Name,
                 Email = driver.Email,
