@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using RideNowAPI.Data;
 using RideNowAPI.Services;
 using System.Security.Claims;
@@ -27,33 +28,49 @@ namespace RideNowAPI.Controllers
 
             try
             {
-                var tokenBytes = Convert.FromBase64String(request.RefreshToken);
+                var storedToken = await _context.RefreshTokens
+                    .FirstOrDefaultAsync(rt => rt.Token == request.RefreshToken && 
+                                              !rt.IsRevoked && 
+                                              rt.ExpiryDate > DateTime.UtcNow);
+
+                if (storedToken == null)
+                    return Unauthorized("Invalid refresh token");
+
+                var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                var jsonToken = handler.ReadJwtToken(request.AccessToken);
                 
-                var principal = _jwtService.ValidateToken(request.AccessToken);
-                if (principal == null)
+                var userId = jsonToken.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier)?.Value;
+                var email = jsonToken.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email)?.Value;
+                var role = jsonToken.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Role)?.Value;
+
+                if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(role))
+                    return Unauthorized("Invalid token claims");
+
+                // Revoke old refresh token
+                storedToken.IsRevoked = true;
+                
+                // Generate new tokens
+                var newAccessToken = _jwtService.GenerateToken(Guid.Parse(userId), email, role);
+                var newRefreshToken = _jwtService.GenerateRefreshToken();
+                
+                // Store new refresh token
+                _context.RefreshTokens.Add(new RideNowAPP.Models.RefreshToken
                 {
-                    var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-                    var jsonToken = handler.ReadJwtToken(request.AccessToken);
-                    
-                    var userId = jsonToken.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier)?.Value;
-                    var email = jsonToken.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email)?.Value;
-                    var role = jsonToken.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Role)?.Value;
+                    Token = newRefreshToken,
+                    UserId = Guid.Parse(userId),
+                    UserType = role,
+                    ExpiryDate = DateTime.UtcNow.AddDays(1),
+                    CreatedAt = DateTime.UtcNow
+                });
+                
+                await _context.SaveChangesAsync();
 
-                    if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(role))
-                        return Unauthorized("Invalid token claims");
-
-                    var newAccessToken = _jwtService.GenerateToken(Guid.Parse(userId), email, role);
-                    var newRefreshToken = _jwtService.GenerateRefreshToken();
-
-                    return Ok(new
-                    {
-                        accessToken = newAccessToken,
-                        refreshToken = newRefreshToken,
-                        expiresIn = 900
-                    });
-                }
-
-                return Unauthorized("Invalid refresh token");
+                return Ok(new
+                {
+                    accessToken = newAccessToken,
+                    refreshToken = newRefreshToken,
+                    expiresIn = 60
+                });
             }
             catch
             {

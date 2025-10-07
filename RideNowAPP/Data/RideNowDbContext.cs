@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RideNowAPI.Models;
+using RideNowAPP.Models;
 
 namespace RideNowAPI.Data
 {
@@ -17,6 +18,7 @@ namespace RideNowAPI.Data
         public DbSet<DriverEarnings> DriverEarnings { get; set; }
         public DbSet<Feedback> Feedbacks { get; set; }
         public DbSet<PaymentSelection> PaymentSelections { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

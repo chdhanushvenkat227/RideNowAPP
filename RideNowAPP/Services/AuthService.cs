@@ -39,6 +39,17 @@ namespace RideNowAPI.Services
             var token = _jwtService.GenerateToken(user.UserId, user.Email, "User");
             var refreshToken = _jwtService.GenerateRefreshToken();
 
+            // Store refresh token in database
+            _context.RefreshTokens.Add(new RideNowAPP.Models.RefreshToken
+            {
+                Token = refreshToken,
+                UserId = user.UserId,
+                UserType = "User",
+                ExpiryDate = DateTime.UtcNow.AddDays(1),
+                CreatedAt = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+
             return new AuthResponseDto
             {
                 Token = token,
@@ -53,13 +64,25 @@ namespace RideNowAPI.Services
 
         public async Task<AuthResponseDto> LoginUserAsync(UserLoginDto dto)
         {
+            //find the existing email.
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
-
+            //validate the credentials
             if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
                 throw new UnauthorizedAccessException("Invalid email or password");
-
+            //generate the jwt token with role claims
             var token = _jwtService.GenerateToken(user.UserId, user.Email, "User");
             var refreshToken = _jwtService.GenerateRefreshToken();
+
+            // Store refresh token in database
+            _context.RefreshTokens.Add(new RideNowAPP.Models.RefreshToken
+            {
+                Token = refreshToken,
+                UserId = user.UserId,
+                UserType = "User",
+                ExpiryDate = DateTime.UtcNow.AddDays(1),
+                CreatedAt = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
 
             return new AuthResponseDto
             {
@@ -126,6 +149,17 @@ namespace RideNowAPI.Services
             var token = _jwtService.GenerateToken(driver.DriverId, driver.Email, "Driver");
             var refreshToken = _jwtService.GenerateRefreshToken();
 
+            // Store refresh token in database
+            _context.RefreshTokens.Add(new RideNowAPP.Models.RefreshToken
+            {
+                Token = refreshToken,
+                UserId = driver.DriverId,
+                UserType = "Driver",
+                ExpiryDate = DateTime.UtcNow.AddDays(1),
+                CreatedAt = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+
             return new AuthResponseDto
             {
                 Token = token,
@@ -147,6 +181,17 @@ namespace RideNowAPI.Services
 
             var token = _jwtService.GenerateToken(driver.DriverId, driver.Email, "Driver");
             var refreshToken = _jwtService.GenerateRefreshToken();
+
+            // Store refresh token in database
+            _context.RefreshTokens.Add(new RideNowAPP.Models.RefreshToken
+            {
+                Token = refreshToken,
+                UserId = driver.DriverId,
+                UserType = "Driver",
+                ExpiryDate = DateTime.UtcNow.AddDays(1),
+                CreatedAt = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
 
             return new AuthResponseDto
             {
